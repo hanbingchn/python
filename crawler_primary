@@ -1,0 +1,41 @@
+import json
+import requests
+from lxml import etree
+
+def get_one_page(n):
+    """爬取网页信息"""
+    url = f'http://maoyan.com/board/4?offset={n}'   # 语法二:{}.format(n)   # 语法三:%d'%n
+    # 被发爬后，用chrome浏览器F12->Network，读取请求头User-Agent信息；告诉服务器，我是浏览器
+    header = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36'}
+    r = requests.get(url,headers=header)
+    return r.text
+
+def parse(text):
+    # 初始化/标准化
+    html = etree.HTML(text)
+    # 提取需要的信息，需要些Xpath语法
+    names = html.xpath('//div[@class="movie-item-info"]/p[@class="name"]/a/@title')
+    releasetimes = html.xpath('//p[@class="releasetime"]/text()')
+    item = {}
+    for name, releasetime in zip(names, releasetimes):
+        item['name'] = name
+        item['releasetime'] = releasetime
+        # 生成器,循环/迭代
+        yield item
+
+def save2file(data):
+    with open('moive.json', 'a', encoding='utf-8') as f:
+        # 把字典/列表转化为字符串
+        data = json.dumps(data, ensure_ascii=False) + ',\n'
+        f.write(data)
+
+def run():
+    for i in range(1,10):
+        x = (i-1)*10
+        text = get_one_page(x)
+        items = parse(text)
+        for item in items:
+            save2file(item)
+
+if __name__ == '__main__':
+    run()
